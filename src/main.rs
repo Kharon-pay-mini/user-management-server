@@ -1,31 +1,45 @@
+mod auth;
 mod config;
 mod database;
+mod middleware;
+mod models;
 mod routes;
+mod services;
+
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, http::header, middleware::Logger, web};
+use actix_web::{
+    App, HttpServer,
+    http::header,
+    middleware::{Logger, from_fn},
+    web,
+};
 use config::{config::Config, config_scope};
 use database::db::Database;
 use dotenv::dotenv;
+use services::geolocation::geolocator::GeoLocator;
+
+use crate::middleware::security_log::security_logger_middleware;
 
 pub struct AppState {
     db: Database,
     env: Config,
     // pub redis_pool: RedisPool,
-    // pub geo_locator: GeoLocator,
-    // pub price_feed: Arc<Mutex<PriceData>>,
+    pub geo_locator: GeoLocator,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
+
+    if std::env::var_os("RUST_LOG").is_none() {
+        unsafe {
+            std::env::set_var("RUST_LOG", "actix_web=trace");
+        }
+    }
+
     env_logger::init();
 
     log::info!("Starting Server......");
-    if std::env::var_os("RUST_LOG").is_none() {
-        unsafe {
-            std::env::set_var("RUST_LOG", "actix_web=info");
-        }
-    }
 
     let config = Config::init();
 
@@ -36,13 +50,16 @@ async fn main() -> std::io::Result<()> {
             std::process::exit(1);
         }
     };
-
+    let geo_locator = GeoLocator::new(config.ip_info_token.clone());
     let port: u16 = config.port.parse().expect("PORT must be i16 type");
 
     let app_state = web::Data::new(AppState {
         db: db.clone(),
         env: config.clone(),
+        geo_locator: geo_locator.clone(),
     });
+
+    log::info!("Server is running on port: {}", port);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -61,7 +78,7 @@ async fn main() -> std::io::Result<()> {
             .configure(config_scope::config)
             .wrap(cors)
             .wrap(Logger::default())
-        // .wrap(from_fn(security_logger_middleware))
+            .wrap(from_fn(security_logger_middleware))
     })
     .bind(("127.0.0.1", port))?
     .run()
