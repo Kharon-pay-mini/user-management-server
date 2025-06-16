@@ -99,6 +99,39 @@ pub enum Role {
     User,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AccountVerificationResponse {
+    pub account_name: String,
+    pub account_number: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Queryable, Clone, AsChangeset, Insertable)]
+#[diesel(table_name=crate::models::schema::user_bank_account)]
+pub struct UserBankAccount {
+    pub id: uuid::Uuid,
+    pub user_id: uuid::Uuid, // foreign key ref
+    pub bank_name: String,
+    pub account_number: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: Option<DateTime<Utc>>,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
+#[diesel(table_name=crate::models::schema::user_bank_account)]
+pub struct NewUserBankAccount {
+    pub user_id: uuid::Uuid,
+    pub bank_name: String,
+    pub account_number: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewUserBankAccountRequest {
+    pub bank_name: String,
+    pub account_number: String,
+}
+
 /*      JSONWEBTOKEN TOKEN DECODE PARAMS     */
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenClaims {
@@ -139,6 +172,22 @@ pub struct OtpSchema {
 pub struct ValidateOtpSchema {
     pub email: String,
     pub otp: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FlutterwaveBankApiResponse<T> {
+    pub status: String,
+    pub message: String,
+    pub data: T,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Bank {
+    id: i64,
+    pub name: String,
+    pub code: String,
+    #[serde(rename = "type")]
+    pub bank_type: Option<String>,
 }
 
 // /*  DISPLAY IMPLEMENTATION FOR ENUMS */

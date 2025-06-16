@@ -1,6 +1,6 @@
 use crate::database::{
-    otp_db::OtpImpl, user_db::UserImpl, user_security_log_db::UserSecurityLogsImpl,
-    user_wallet_db::UserWalletImpl,
+    otp_db::OtpImpl, user_bank_account_db::UserBankImpl, user_db::UserImpl,
+    user_security_log_db::UserSecurityLogsImpl, user_wallet_db::UserWalletImpl,
 };
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
@@ -75,3 +75,4 @@ impl UserWalletImpl for Database {}
 impl UserImpl for Database {}
 impl OtpImpl for Database {}
 impl UserSecurityLogsImpl for Database {}
+impl UserBankImpl for Database {}

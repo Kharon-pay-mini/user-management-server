@@ -1,4 +1,13 @@
-use crate::{AppState, auth::otp::generate_otp};
+use crate::{
+    AppState,
+    auth::otp::generate_otp,
+    helpers::bank_helpers::get_bank_code_and_verify_account,
+    models::{
+        models::{NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount},
+        response::FilteredBankDetails,
+        schema::user_bank_account::bank_name,
+    },
+};
 use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder,
     cookie::{Cookie, time::Duration as ActixWebDuration},
@@ -15,8 +24,8 @@ use crate::auth::{
     jwt_auth::JwtMiddleware,
 };
 use crate::database::{
-    db::AppError, otp_db::OtpImpl, user_db::UserImpl, user_security_log_db::UserSecurityLogsImpl,
-    user_wallet_db::UserWalletImpl,
+    db::AppError, otp_db::OtpImpl, user_bank_account_db::UserBankImpl, user_db::UserImpl,
+    user_security_log_db::UserSecurityLogsImpl, user_wallet_db::UserWalletImpl,
 };
 use crate::models::models::{
     CreateUserSchema, NewUser, NewUserWallet, OtpSchema, TokenClaims, User, UserSecurityLog,
@@ -73,6 +82,15 @@ fn filtered_wallet_record(wallet: &UserWallet) -> FilteredWallet {
             .map_or("Unknown".to_string(), |s| s.to_string()),
         created_at: wallet.created_at,
         updated_at: wallet.updated_at.unwrap_or_else(|| Utc::now()),
+    }
+}
+
+fn filtered_bank_record(bank: &UserBankAccount) -> FilteredBankDetails {
+    FilteredBankDetails {
+        bank_details_id: bank.id.to_string(),
+        user_id: bank.user_id.to_string(),
+        bank_name: bank.bank_name.to_string(),
+        bank_account_number: bank.account_number.to_string(),
     }
 }
 
@@ -157,6 +175,104 @@ async fn create_user_handler(
                 "status": "error",
                 "message": format!("Failed to create user: {:?}", e)
             }))
+        }
+    }
+}
+
+#[post("/users/me/bank-accounts")]
+async fn register_user_bank_account_handler(
+    body: web::Json<NewUserBankAccountRequest>,
+    data: web::Data<AppState>,
+    auth: JwtMiddleware,
+) -> impl Responder {
+    let user_id = auth.user_id;
+    let account_number = body.account_number.clone();
+    let bank_acc_name = body.bank_name.clone();
+
+    match data.db.get_user_by_id(user_id) {
+        Ok(_) => {
+            let (_account_details, _bank_code) = match get_bank_code_and_verify_account(
+                &data,
+                bank_acc_name.clone(),
+                account_number.clone(),
+            )
+            .await
+            {
+                Ok(details) => details,
+                Err(e) => {
+                    eprintln!("Failed to verify bank account: {:?}", e);
+                    return e;
+                }
+            };
+
+            let bank_details = NewUserBankAccount {
+                user_id: user_id.clone(),
+                account_number: account_number.clone(),
+                bank_name: bank_acc_name.clone(),
+            };
+
+            match data.db.create_user_bank(bank_details) {
+                Ok(bank) => {
+                    let filtered_bank_details = filtered_bank_record(&bank);
+                    HttpResponse::Created().json(filtered_bank_details)
+                }
+                Err(e) => {
+                    eprintln!("Failed to create bank details: {:?}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "status": "error",
+                        "message": format!("Failed to create bank details: {:?}", e)
+                    }));
+                }
+            }
+        }
+        Err(e) => {
+            match e {
+                AppError::DieselError(diesel::result::Error::NotFound) => {
+                    return HttpResponse::NotFound().json(json!({
+                        "status": "error",
+                        "message": "User not found"
+                    }));
+                }
+                _ => {
+                    eprintln!("Failed to create wallet: {:?}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "status": "error",
+                        "message": format!("Failed to create bank details: {:?}", e)
+                    }));
+                }
+            };
+        }
+    }
+}
+
+#[get("/users/me/bank-accounts")]
+async fn get_user_bank_accounts_handler(
+    req: HttpRequest,
+    data: web::Data<AppState>,
+    _: JwtMiddleware,
+) -> impl Responder {
+    let ext = req.extensions();
+    let user_id = ext.get::<uuid::Uuid>().unwrap();
+
+    match data.db.get_banks_by_user_id(*user_id) {
+        Ok(banks) => {
+            let filtered_banks: Vec<FilteredBankDetails> = banks
+                .into_iter()
+                .map(|bank| filtered_bank_record(&bank))
+                .collect();
+
+            let json_response = serde_json::json!({
+                "status": "success",
+                "data": serde_json::json!({
+                    "banks": filtered_banks
+                })
+            });
+
+            HttpResponse::Ok().json(json_response)
+        }
+        Err(e) => {
+            eprintln!("Error fetching user bank accounts: {:?}", e);
+            HttpResponse::InternalServerError().json("Error fetching user bank accounts")
         }
     }
 }

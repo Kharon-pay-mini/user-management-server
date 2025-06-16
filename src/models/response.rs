@@ -31,6 +31,14 @@ pub struct FilteredWallet {
 }
 
 #[derive(Debug, Serialize)]
+pub struct FilteredBankDetails {
+    pub bank_details_id: String,
+    pub user_id: String,
+    pub bank_name: String,
+    pub bank_account_number: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct WalletData {
     pub wallet: FilteredWallet,
 }
