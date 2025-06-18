@@ -366,17 +366,15 @@ async fn validate_otp_handler(
 
     let user = match data.db.get_user_by_email(user_email.clone()) {
         Ok(user) => user,
-        Err(e) => {
-            match e {
-                AppError::DieselError(diesel::result::Error::NotFound) => {
-                    return HttpResponse::Unauthorized().json("User not found");
-                }
-                _ => {
-                    eprintln!("Database error getting user: {:?}", e);
-                    return HttpResponse::InternalServerError().json("Database error.");
-                }
+        Err(e) => match e {
+            AppError::DieselError(diesel::result::Error::NotFound) => {
+                return HttpResponse::Unauthorized().json("User not found");
             }
-        }
+            _ => {
+                eprintln!("Database error getting user: {:?}", e);
+                return HttpResponse::InternalServerError().json("Database error.");
+            }
+        },
     };
 
     let user_id = user.id;
@@ -419,7 +417,7 @@ async fn validate_otp_handler(
 
             let cookie = Cookie::build("token", token.to_owned())
                 .path("/")
-                .secure(false)// TODO: Set to true in production
+                .secure(false) // TODO: Set to true in production
                 .max_age(ActixWebDuration::new(24 * 60 * 60, 0)) //24h
                 .http_only(true)
                 .same_site(SameSite::Lax) //TODO SameSite::Strict in production
