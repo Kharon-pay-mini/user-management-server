@@ -137,7 +137,7 @@ pub struct OtpSchema {
 
 #[derive(Debug, Deserialize)]
 pub struct ValidateOtpSchema {
-    pub user_id: uuid::Uuid,
+    pub email: String,
     pub otp: i32,
 }
 

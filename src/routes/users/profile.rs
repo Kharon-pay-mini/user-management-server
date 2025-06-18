@@ -245,9 +245,25 @@ async fn validate_otp_handler(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
-    let user_id = body.user_id;
+    let user_email = body.email.clone();
     let otp = body.otp;
 
+    let user = match data.db.get_user_by_email(user_email.clone()) {
+        Ok(user) => user,
+        Err(e) => {
+            match e {
+                AppError::DieselError(diesel::result::Error::NotFound) => {
+                    return HttpResponse::Unauthorized().json("User not found");
+                }
+                _ => {
+                    eprintln!("Database error getting user: {:?}", e);
+                    return HttpResponse::InternalServerError().json("Database error.");
+                }
+            }
+        }
+    };
+
+    let user_id = user.id;
     let stored_otp = data.db.get_otp_by_user_id(user_id);
 
     match stored_otp {
@@ -286,12 +302,11 @@ async fn validate_otp_handler(
             .unwrap();
 
             let cookie = Cookie::build("token", token.to_owned())
-                .domain("localhost")
                 .path("/")
-                .secure(false)
+                .secure(false)// TODO: Set to true in production
                 .max_age(ActixWebDuration::new(24 * 60 * 60, 0)) //24h
                 .http_only(true)
-                .same_site(SameSite::None)
+                .same_site(SameSite::Lax) //TODO SameSite::Strict in production
                 .finish();
 
             log_successful_login(&data, &req, user_id).await;
