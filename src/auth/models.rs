@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserLoginStats {
-    pub user_id: Uuid,
+    pub user_id: String,
     pub total_logins: i64,
     pub successful_logins: i64,
     pub failed_logins: i64,

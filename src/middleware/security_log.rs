@@ -49,7 +49,7 @@ pub async fn security_logger_middleware(
                 let mut flagged_for_review = false;
 
                 if is_login_failure {
-                    let failures = db.get_user_total_failed_logins(user_id.unwrap());
+                    let failures = db.get_user_total_failed_logins(user_id.clone().unwrap().to_string());
 
                     if let Ok(recent_failures) = failures {
                         if recent_failures + failed_login_attempts >= 3 {
@@ -61,7 +61,7 @@ pub async fn security_logger_middleware(
                         }
 
                         let new_log = NewUserSecurityLog {
-                            user_id: user_id.unwrap().clone(),
+                            user_id: user_id.unwrap().to_string().clone(),
                             ip_address: ip_address.clone(),
                             city: city.clone(),
                             country: country.clone(),

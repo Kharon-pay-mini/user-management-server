@@ -13,7 +13,7 @@ use uuid::Uuid;
 async fn store_login_attempt(
     app_state: &AppState,
     req: &HttpRequest,
-    user_id: Uuid,
+    user_id: String,
     success: bool,
     _failure_reason: Option<String>,
 ) -> Result<(), AppError> {
@@ -44,7 +44,7 @@ async fn store_login_attempt(
             let mut flagged_for_review = false;
 
             if !success {
-                if let Ok(recent_failures) = db.get_user_total_failed_logins(user_id) {
+                if let Ok(recent_failures) = db.get_user_total_failed_logins(user_id.clone()) {
                     if recent_failures + failed_login_attempts >= 3 {
                         flagged_for_review = true;
                     }
@@ -52,7 +52,7 @@ async fn store_login_attempt(
             }
 
             let new_log = NewUserSecurityLog {
-                user_id,
+                user_id: user_id.clone(),
                 ip_address: ip_address_clone,
                 city: city_clone,
                 country: country_clone,
@@ -72,7 +72,7 @@ async fn store_login_attempt(
     Ok(())
 }
 
-pub async fn log_successful_login(app_state: &AppState, req: &HttpRequest, user_id: Uuid) {
+pub async fn log_successful_login(app_state: &AppState, req: &HttpRequest, user_id: String) {
     if let Err(e) = store_login_attempt(app_state, req, user_id, true, None).await {
         log::error!("Failed to log successful login: {:?}", e);
     }
@@ -81,7 +81,7 @@ pub async fn log_successful_login(app_state: &AppState, req: &HttpRequest, user_
 pub async fn log_failed_login(
     app_state: &AppState,
     req: &HttpRequest,
-    user_id: Uuid,
+    user_id: String,
     reason: Option<String>,
 ) {
     if let Err(e) = store_login_attempt(app_state, req, user_id, false, reason).await {
@@ -90,7 +90,7 @@ pub async fn log_failed_login(
 }
 
 pub async fn verify_admin_role(
-    admin_id: Uuid,
+    admin_id: &str,
     data: &web::Data<AppState>,
 ) -> Result<(), HttpResponse> {
     match data.db.get_user_by_id(admin_id) {
@@ -110,7 +110,7 @@ pub async fn verify_admin_role(
     }
 }
 
-pub async fn logout(_data: &web::Data<AppState>, req: &HttpRequest, user_id: Uuid) {
+pub async fn logout(_data: &web::Data<AppState>, req: &HttpRequest, user_id: &str) {
     let client_ip = req
         .connection_info()
         .realip_remote_addr()

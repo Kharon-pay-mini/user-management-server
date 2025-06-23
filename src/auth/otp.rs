@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use crate::database::db::Database;
 
-pub async fn generate_otp(user_id_no: Uuid, user_email: String, db: Database) -> HttpResponse {
-    match db.get_otp_by_user_id(user_id_no) {
+pub async fn generate_otp(user_id_no: String, user_email: String, db: Database) -> HttpResponse {
+    match db.get_otp_by_user_id(user_id_no.clone()) {
         Ok(existing_otp) => {
             let now = Utc::now();
             let time_since_creation = now - existing_otp.created_at;
@@ -34,7 +34,7 @@ pub async fn generate_otp(user_id_no: Uuid, user_email: String, db: Database) ->
                     "message": "Failed to process OTP request"
                 }));
             } else {
-                println!("Deleted old OTP for user {}", user_id_no);
+                println!("Deleted old OTP for user {}", user_id_no.clone());
                 return send_new_otp(user_id_no, user_email, db).await;
             }
         }
@@ -55,7 +55,7 @@ pub async fn generate_otp(user_id_no: Uuid, user_email: String, db: Database) ->
     }
 }
 
-pub async fn send_new_otp(user_id: Uuid, user_email: String, db: Database) -> HttpResponse {
+pub async fn send_new_otp(user_id: String, user_email: String, db: Database) -> HttpResponse {
     let otp_code = rng().random_range(100_000..=999_999);
 
     let new_otp = NewOtp {
@@ -63,19 +63,19 @@ pub async fn send_new_otp(user_id: Uuid, user_email: String, db: Database) -> Ht
         user_id: user_id.clone(),
     };
 
-    match db.create_otp(new_otp) {
+    match db.create_otp(new_otp.clone()) {
         Ok(_) => {
             if let Err(e) = send_verification_email(user_email.as_str(), otp_code).await {
                 eprint!("Failed to send email: {}", e);
                 return HttpResponse::InternalServerError().json(json!({
                     "status": "error",
-                    "message": "Failed to send verification email"
+                    "message": "Failed to send verification email",
                 }));
             } else {
                 HttpResponse::Ok().json(json!({
                     "status": "success",
                     "message": format!("OTP sent to {}", user_email),
-                    "expires_in_minutes": 2
+                    "expires_in_minutes": 15
                 }))
             }
         }

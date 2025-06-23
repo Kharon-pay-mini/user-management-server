@@ -7,7 +7,7 @@ use diesel::{AsChangeset, Insertable, Queryable};
 #[derive(Debug, Deserialize, Serialize, Clone, Queryable, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::users)]
 pub struct User {
-    pub id: uuid::Uuid,
+    pub id: String, // UUID as String
     pub email: String,
     pub phone: Option<String>,
     pub last_logged_in: Option<DateTime<Utc>>,
@@ -21,6 +21,7 @@ pub struct User {
 #[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::users)]
 pub struct NewUser {
+    pub id: String, // UUID as String
     pub email: String,
     pub phone: Option<String>,
     pub verified: bool,
@@ -31,7 +32,7 @@ pub struct NewUser {
 #[diesel(table_name=crate::models::schema::user_wallet)]
 pub struct UserWallet {
     pub id: uuid::Uuid,
-    pub user_id: uuid::Uuid, //foreign key ref
+    pub user_id: String, //foreign key ref
     pub wallet_address: Option<String>,
     pub network_used_last: Option<String>,
     #[serde(rename = "createdAt")]
@@ -43,7 +44,7 @@ pub struct UserWallet {
 #[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_wallet)]
 pub struct NewUserWallet {
-    pub user_id: uuid::Uuid,
+    pub user_id: String,
     pub wallet_address: Option<String>,
     pub network_used_last: Option<String>,
 }
@@ -52,7 +53,7 @@ pub struct NewUserWallet {
 #[diesel(table_name=crate::models::schema::user_security_logs)]
 pub struct UserSecurityLog {
     pub log_id: uuid::Uuid,
-    pub user_id: uuid::Uuid,
+    pub user_id: String,
     pub ip_address: String,
     pub city: String,
     pub country: String,
@@ -65,7 +66,7 @@ pub struct UserSecurityLog {
 #[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_security_logs)]
 pub struct NewUserSecurityLog {
-    pub user_id: uuid::Uuid,
+    pub user_id: String,
     pub ip_address: String,
     pub city: String,
     pub country: String,
@@ -79,7 +80,7 @@ pub struct NewUserSecurityLog {
 pub struct Otp {
     pub otp_id: uuid::Uuid,
     pub otp_code: i32,
-    pub user_id: uuid::Uuid,
+    pub user_id: String,
     #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
     #[serde(rename = "expiresAt")]
@@ -90,7 +91,7 @@ pub struct Otp {
 #[diesel(table_name=crate::models::schema::otp)]
 pub struct NewOtp {
     pub otp_code: i32,
-    pub user_id: uuid::Uuid,
+    pub user_id: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
@@ -109,7 +110,7 @@ pub struct AccountVerificationResponse {
 #[diesel(table_name=crate::models::schema::user_bank_account)]
 pub struct UserBankAccount {
     pub id: uuid::Uuid,
-    pub user_id: uuid::Uuid, // foreign key ref
+    pub user_id: String, // foreign key ref
     pub bank_name: String,
     pub account_number: String,
     #[serde(rename = "createdAt")]
@@ -121,7 +122,7 @@ pub struct UserBankAccount {
 #[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_bank_account)]
 pub struct NewUserBankAccount {
-    pub user_id: uuid::Uuid,
+    pub user_id: String,
     pub bank_name: String,
     pub account_number: String,
 }

@@ -19,7 +19,7 @@ pub trait UserWalletImpl: DbAccess {
             .map_err(AppError::DieselError)
     }
 
-    fn get_wallet_by_user_id(&self, find_user: uuid::Uuid) -> Result<UserWallet, AppError> {
+    fn get_wallet_by_user_id(&self, find_user: &str) -> Result<UserWallet, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
 
         user_wallet

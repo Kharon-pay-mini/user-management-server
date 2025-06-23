@@ -38,7 +38,7 @@ pub async fn get_bank_code_and_verify_account(
         }
     };
 
-    match verify_account_via_flutterwave(&app_state, &bank_code, &account_number).await {
+    match verify_account_via_flutterwave(&app_state, &account_number, &bank_code).await {
         Ok(account_details) => return Ok((account_details, bank_code)),
         Err(e) => {
             return Err(HttpResponse::InternalServerError().json(serde_json::json!({

@@ -159,6 +159,9 @@ async fn create_user_handler(
 
     // Neither email nor phone found - create new user
     let new_user = NewUser {
+        // Generate a new UUID for user with a simple format to parse felt correctly
+        // This is a workaround to ensure UUIDs are compatible with the Felt format in cartridge controller calls
+        id: uuid::Uuid::new_v4().simple().to_string(),
         email: email.clone(),
         phone: phone.clone(),
         verified: false,
@@ -167,6 +170,7 @@ async fn create_user_handler(
 
     match data.db.create_user(new_user.clone()) {
         Ok(user) => {
+            println!("User created successfully: {:?}", user.id);
             return generate_otp(user.id, user.email, data.db.clone()).await;
         }
         Err(e) => {
@@ -189,7 +193,7 @@ async fn register_user_bank_account_handler(
     let account_number = body.account_number.clone();
     let bank_acc_name = body.bank_name.clone();
 
-    match data.db.get_user_by_id(user_id) {
+    match data.db.get_user_by_id(user_id.as_str().clone()) {
         Ok(_) => {
             let (_account_details, _bank_code) = match get_bank_code_and_verify_account(
                 &data,
@@ -210,6 +214,7 @@ async fn register_user_bank_account_handler(
                 account_number: account_number.clone(),
                 bank_name: bank_acc_name.clone(),
             };
+            println!("Bank details: {:?}", bank_details);
 
             match data.db.create_user_bank(bank_details) {
                 Ok(bank) => {
@@ -252,9 +257,9 @@ async fn get_user_bank_accounts_handler(
     _: JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
-    let user_id = ext.get::<uuid::Uuid>().unwrap();
+    let user_id = ext.get::<String>().unwrap();
 
-    match data.db.get_banks_by_user_id(*user_id) {
+    match data.db.get_banks_by_user_id(*&user_id) {
         Ok(banks) => {
             let filtered_banks: Vec<FilteredBankDetails> = banks
                 .into_iter()
@@ -287,7 +292,7 @@ async fn update_user_wallet_handler(
     let wallet_address = body.wallet_address.to_string();
     let network = body.network.to_string();
 
-    match data.db.get_user_by_id(user_id) {
+    match data.db.get_user_by_id(user_id.as_str().clone()) {
         Ok(_) => {
             let wallet = NewUserWallet {
                 user_id: user_id.clone(),
@@ -378,7 +383,7 @@ async fn validate_otp_handler(
     };
 
     let user_id = user.id;
-    let stored_otp = data.db.get_otp_by_user_id(user_id);
+    let stored_otp = data.db.get_otp_by_user_id(user_id.clone());
 
     match stored_otp {
         Ok(otp_record) => {
@@ -403,7 +408,7 @@ async fn validate_otp_handler(
             let iat = now.timestamp() as usize;
             let exp = (now + Duration::seconds(24 * 60 * 60)).timestamp() as usize;
             let claims: TokenClaims = TokenClaims {
-                sub: user_id.to_string(),
+                sub: user_id.to_string().clone(),
                 iat,
                 exp,
             };
@@ -417,10 +422,10 @@ async fn validate_otp_handler(
 
             let cookie = Cookie::build("token", token.to_owned())
                 .path("/")
-                .secure(false) // TODO: Set to true in production
+                .secure(true)
                 .max_age(ActixWebDuration::new(24 * 60 * 60, 0)) //24h
                 .http_only(true)
-                .same_site(SameSite::Lax) //TODO SameSite::Strict in production
+                .same_site(SameSite::None) //TODO SameSite::Strict in production
                 .finish();
 
             log_successful_login(&data, &req, user_id).await;
@@ -450,8 +455,8 @@ async fn get_user_handler(
     _: JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
-    let user_id = ext.get::<uuid::Uuid>().unwrap();
-    let user = match data.db.get_user_by_id(*user_id) {
+    let user_id = ext.get::<String>().unwrap();
+    let user = match data.db.get_user_by_id(*&user_id.as_str().clone()) {
         Ok(user) => user,
         Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
             return HttpResponse::NotFound().json("User not found");
@@ -479,9 +484,9 @@ async fn get_user_logs_handler(
     _: JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
-    let user_id = ext.get::<uuid::Uuid>().unwrap();
+    let user_id = ext.get::<String>().unwrap();
 
-    let logs = match data.db.get_security_logs_by_user_id(*user_id) {
+    let logs = match data.db.get_security_logs_by_user_id(*&user_id.as_str().clone()) {
         Ok(log) => log,
         Err(e) => {
             eprint!("Error fetching user logs: {:?}", e);
@@ -511,9 +516,9 @@ async fn get_wallet_handler(
     _: JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
-    let user_id = ext.get::<uuid::Uuid>().unwrap();
+    let user_id = ext.get::<String>().unwrap();
 
-    let wallet = match data.db.get_wallet_by_user_id(*user_id) {
+    let wallet = match data.db.get_wallet_by_user_id(*&user_id.as_str().clone()) {
         Ok(wallet) => wallet,
         Err(e) => {
             match e {
@@ -545,7 +550,7 @@ async fn logout_handler(
 ) -> impl Responder {
     let user_id = auth.user_id;
 
-    logout(&data, &req, user_id).await;
+    logout(&data, &req, user_id.as_str().clone()).await;
 
     let cookie = Cookie::build("token", "")
         .path("/")

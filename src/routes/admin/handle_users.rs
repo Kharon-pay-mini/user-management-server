@@ -31,11 +31,11 @@ pub async fn get_user_login_stats(
         }
     };
 
-    if let Err(response) = verify_admin_role(admin_user_id, &data).await {
+    if let Err(response) = verify_admin_role(admin_user_id.as_str().clone(), &data).await {
         return response;
     }
 
-    let total_attempts = match data.db.get_user_security_logs_count(target_user_id) {
+    let total_attempts = match data.db.get_user_security_logs_count(target_user_id.clone()) {
         Ok(count) => count,
         Err(_) => {
             return HttpResponse::InternalServerError().json(json!({
@@ -45,7 +45,7 @@ pub async fn get_user_login_stats(
         }
     };
 
-    let failed_attempts = match data.db.get_user_total_failed_logins(target_user_id) {
+    let failed_attempts = match data.db.get_user_total_failed_logins(target_user_id.clone()) {
         Ok(count) => count,
         Err(_) => {
             return HttpResponse::InternalServerError().json(json!({
@@ -57,7 +57,7 @@ pub async fn get_user_login_stats(
 
     let recent_logs = match data
         .db
-        .get_user_security_logs_with_limit(target_user_id, Some(10))
+        .get_user_security_logs_with_limit(target_user_id.clone(), Some(10))
     {
         Ok(logs) => logs,
         Err(_) => {
@@ -91,7 +91,7 @@ pub async fn get_user_login_stats(
         .sum();
 
     let stats = UserLoginStats {
-        user_id: target_user_id,
+        user_id: target_user_id.clone(),
         total_logins: total_attempts,
         successful_logins,
         failed_logins: failed_attempts,
@@ -127,7 +127,7 @@ pub async fn get_user_login_history(
         }
     };
 
-    if let Err(response) = verify_admin_role(admin_user_id, &data).await {
+    if let Err(response) = verify_admin_role(admin_user_id.as_str().clone(), &data).await {
         return response;
     }
 
@@ -136,7 +136,7 @@ pub async fn get_user_login_history(
 
     let logs = match data
         .db
-        .get_user_security_logs_paginated(target_user_id, limit, offset)
+        .get_user_security_logs_paginated(target_user_id.clone(), limit, offset)
     {
         Ok(logs) => logs,
         Err(_) => {
@@ -163,7 +163,7 @@ pub async fn get_user_login_history(
 
     let total_count = data
         .db
-        .get_user_security_logs_count(target_user_id)
+        .get_user_security_logs_count(target_user_id.clone())
         .unwrap_or(history.len() as i64);
 
     HttpResponse::Ok().json(json!({
@@ -190,7 +190,7 @@ pub async fn get_flagged_users(
     let limit = body.limit.unwrap_or(100);
     let offset = body.offset.unwrap_or(0);
 
-    if let Err(response) = verify_admin_role(admin_user_id, &data).await {
+    if let Err(response) = verify_admin_role(admin_user_id.as_str().clone(), &data).await {
         return response;
     }
 
