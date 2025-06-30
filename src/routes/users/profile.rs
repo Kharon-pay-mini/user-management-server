@@ -5,7 +5,6 @@ use crate::{
     models::{
         models::{NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount},
         response::FilteredBankDetails,
-        schema::user_bank_account::bank_name,
     },
 };
 use actix_web::{
@@ -193,7 +192,7 @@ async fn register_user_bank_account_handler(
     let account_number = body.account_number.clone();
     let bank_acc_name = body.bank_name.clone();
 
-    match data.db.get_user_by_id(user_id.as_str().clone()) {
+    match data.db.get_user_by_id(user_id.as_str()) {
         Ok(_) => {
             let (_account_details, _bank_code) = match get_bank_code_and_verify_account(
                 &data,
@@ -292,7 +291,7 @@ async fn update_user_wallet_handler(
     let wallet_address = body.wallet_address.to_string();
     let network = body.network.to_string();
 
-    match data.db.get_user_by_id(user_id.as_str().clone()) {
+    match data.db.get_user_by_id(user_id.as_str()) {
         Ok(_) => {
             let wallet = NewUserWallet {
                 user_id: user_id.clone(),
@@ -456,7 +455,7 @@ async fn get_user_handler(
 ) -> impl Responder {
     let ext = req.extensions();
     let user_id = ext.get::<String>().unwrap();
-    let user = match data.db.get_user_by_id(*&user_id.as_str().clone()) {
+    let user = match data.db.get_user_by_id(*&user_id.as_str()) {
         Ok(user) => user,
         Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
             return HttpResponse::NotFound().json("User not found");
@@ -486,7 +485,7 @@ async fn get_user_logs_handler(
     let ext = req.extensions();
     let user_id = ext.get::<String>().unwrap();
 
-    let logs = match data.db.get_security_logs_by_user_id(*&user_id.as_str().clone()) {
+    let logs = match data.db.get_security_logs_by_user_id(*&user_id.as_str()) {
         Ok(log) => log,
         Err(e) => {
             eprint!("Error fetching user logs: {:?}", e);
@@ -518,7 +517,7 @@ async fn get_wallet_handler(
     let ext = req.extensions();
     let user_id = ext.get::<String>().unwrap();
 
-    let wallet = match data.db.get_wallet_by_user_id(*&user_id.as_str().clone()) {
+    let wallet = match data.db.get_wallet_by_user_id(*&user_id.as_str()) {
         Ok(wallet) => wallet,
         Err(e) => {
             match e {
@@ -550,7 +549,7 @@ async fn logout_handler(
 ) -> impl Responder {
     let user_id = auth.user_id;
 
-    logout(&data, &req, user_id.as_str().clone()).await;
+    logout(&data, &req, user_id.as_str()).await;
 
     let cookie = Cookie::build("token", "")
         .path("/")

@@ -49,7 +49,8 @@ pub async fn security_logger_middleware(
                 let mut flagged_for_review = false;
 
                 if is_login_failure {
-                    let failures = db.get_user_total_failed_logins(user_id.clone().unwrap().to_string());
+                    let failures =
+                        db.get_user_total_failed_logins(user_id.clone().unwrap().to_string());
 
                     if let Ok(recent_failures) = failures {
                         if recent_failures + failed_login_attempts >= 3 {

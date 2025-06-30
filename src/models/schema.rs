@@ -4,8 +4,7 @@ diesel::table! {
     otp (otp_id) {
         otp_id -> Uuid,
         otp_code -> Int4,
-        #[max_length = 50]
-        user_id -> Varchar,
+        user_id -> Text,
         created_at -> Timestamptz,
         expires_at -> Timestamptz,
     }
@@ -14,8 +13,7 @@ diesel::table! {
 diesel::table! {
     user_bank_account (id) {
         id -> Uuid,
-        #[max_length = 50]
-        user_id -> Varchar,
+        user_id -> Text,
         #[max_length = 255]
         bank_name -> Varchar,
         #[max_length = 50]
@@ -28,8 +26,7 @@ diesel::table! {
 diesel::table! {
     user_security_logs (log_id) {
         log_id -> Uuid,
-        #[max_length = 50]
-        user_id -> Varchar,
+        user_id -> Text,
         #[max_length = 50]
         ip_address -> Varchar,
         #[max_length = 50]
@@ -45,8 +42,7 @@ diesel::table! {
 diesel::table! {
     user_wallet (id) {
         id -> Uuid,
-        #[max_length = 50]
-        user_id -> Varchar,
+        user_id -> Text,
         #[max_length = 100]
         wallet_address -> Nullable<Varchar>,
         #[max_length = 50]
@@ -58,8 +54,7 @@ diesel::table! {
 
 diesel::table! {
     users (id) {
-        #[max_length = 50]
-        id -> Varchar,
+        id -> Text,
         #[max_length = 255]
         email -> Varchar,
         #[max_length = 20]
