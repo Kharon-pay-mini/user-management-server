@@ -31,10 +31,11 @@ pub struct NewUser {
 #[derive(Debug, Deserialize, Serialize, Clone, Queryable, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_wallet)]
 pub struct UserWallet {
-    pub id: uuid::Uuid,
+    pub id: String,
     pub user_id: String, //foreign key ref
     pub wallet_address: Option<String>,
     pub network_used_last: Option<String>,
+    pub controller_info: Option<String>,
     #[serde(rename = "createdAt")]
     pub created_at: Option<DateTime<Utc>>,
     #[serde(rename = "updatedAt")]
