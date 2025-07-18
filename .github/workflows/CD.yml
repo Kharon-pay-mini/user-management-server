@@ -1,4 +1,4 @@
-name: CD - KharonPay Registration Server
+name: CD - KharonPay User Management Server
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  GHCR_IMAGE: ghcr.io/kharon-labs/kharon-server:${{ github.ref_name }}
+  GHCR_IMAGE: ghcr.io/kharon-labs/kharon-user-management:${{ github.ref_name }}
 
 jobs:
   build-test-push:
