@@ -431,7 +431,7 @@ async fn validate_otp_handler(
 
             HttpResponse::Ok()
                 .cookie(cookie)
-                .json(json!({"status": "success", "message": "Sign in successful"}))
+                .json(json!({"status": "success", "token": token, "message": "Sign in successful"})) //TODO: remove token from response in production
         }
         Err(e) => {
             match e {
