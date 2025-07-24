@@ -26,7 +26,10 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 RUN rm -rf src
 
-COPY . .
+
+COPY src ./src
+COPY migrations ./migrations
+COPY diesel.toml diesel.toml
 
 RUN cargo build --release
 
@@ -61,4 +64,4 @@ ENV RUST_LOG=info
 
 EXPOSE 8080
 
-CMD ["app"]
+CMD ["/usr/local/bin/app"]
