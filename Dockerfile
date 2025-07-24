@@ -47,21 +47,23 @@ RUN apt-get update && apt-get install -y \
 
 RUN useradd -m appuser
 
+RUN update-ca-certificates
+
 COPY --from=builder /app/target/release/user-management-server /usr/local/bin/app
 COPY --from=builder /cargo-bin/bin/diesel /usr/local/bin/diesel
-
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# script to check if .env exists and copy it
-RUN if [ -f .env ]; then cp .env /app/.env; else echo ".env file not found, skipping copy."; fi
-
 # COPY .env /app/.env
+
+# ✅ Sanity check to ensure binary is present
+RUN test -x /usr/local/bin/app || (echo "❌ Binary missing!" && exit 1)
+
 
 USER appuser
 WORKDIR /app
 
 ENV RUST_LOG=info
 
-EXPOSE 8080
+EXPOSE 8001
 
 CMD ["/usr/local/bin/app"]

@@ -39,6 +39,7 @@ async fn main() -> std::io::Result<()> {
     }
 
     env_logger::init();
+    let bind_address = std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
 
     log::info!("Starting Server......");
 
@@ -81,7 +82,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(from_fn(security_logger_middleware))
     })
-    .bind(("0.0.0.0", port))?
+    .bind((bind_address, port))?
     .run()
     .await
 }
