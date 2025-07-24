@@ -107,6 +107,14 @@ pub struct AccountVerificationResponse {
     pub account_number: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BankAccountDetails {
+    pub account_name: String,
+    pub account_number: String,
+    pub bank_code: String,
+    pub bank_name: String,
+}
+
 #[derive(Debug, Deserialize, Serialize, Queryable, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_bank_account)]
 pub struct UserBankAccount {

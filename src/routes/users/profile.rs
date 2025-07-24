@@ -3,7 +3,9 @@ use crate::{
     auth::otp::generate_otp,
     helpers::bank_helpers::get_bank_code_and_verify_account,
     models::{
-        models::{NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount},
+        models::{
+            BankAccountDetails, NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount,
+        },
         response::FilteredBankDetails,
     },
 };
@@ -182,21 +184,21 @@ async fn create_user_handler(
     }
 }
 
-#[post("/users/me/bank-accounts")]
-async fn register_user_bank_account_handler(
+#[post("/users/me/bank-accounts/verify")]
+async fn verify_user_bank_account_handler(
     body: web::Json<NewUserBankAccountRequest>,
     data: web::Data<AppState>,
     auth: JwtMiddleware,
 ) -> impl Responder {
     let user_id = auth.user_id;
     let account_number = body.account_number.clone();
-    let bank_acc_name = body.bank_name.clone();
+    let bank_name = body.bank_name.clone();
 
     match data.db.get_user_by_id(user_id.as_str()) {
         Ok(_) => {
-            let (_account_details, _bank_code) = match get_bank_code_and_verify_account(
+            let (account_details, bank_code) = match get_bank_code_and_verify_account(
                 &data,
-                bank_acc_name.clone(),
+                bank_name.clone(),
                 account_number.clone(),
             )
             .await
@@ -208,12 +210,56 @@ async fn register_user_bank_account_handler(
                 }
             };
 
+            let verification_response = BankAccountDetails {
+                account_name: account_details.account_name,
+                account_number: account_details.account_number,
+                bank_name: bank_name.clone(),
+                bank_code: bank_code.clone(),
+            };
+
+            HttpResponse::Ok().json(json!({
+                "status": "success",
+                "data": verification_response
+            }))
+        }
+        Err(e) => {
+            match e {
+                AppError::DieselError(diesel::result::Error::NotFound) => {
+                    return HttpResponse::NotFound().json(json!({
+                        "status": "error",
+                        "message": "User not found"
+                    }));
+                }
+                _ => {
+                    eprintln!("Failed to verify bank account: {:?}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "status": "error",
+                        "message": format!("Failed to verify bank account: {:?}", e)
+                    }));
+                }
+            };
+        }
+    }
+}
+
+#[post("/users/me/bank-accounts/confirm")]
+async fn confirm_user_bank_account_handler(
+    body: web::Json<BankAccountDetails>,
+    data: web::Data<AppState>,
+    auth: JwtMiddleware,
+) -> impl Responder {
+    let user_id = auth.user_id;
+    let account_number = body.account_number.clone();
+    let bank_acc_name = body.bank_name.clone();
+
+    match data.db.get_user_by_id(user_id.as_str()) {
+        Ok(_) => {
             let bank_details = NewUserBankAccount {
                 user_id: user_id.clone(),
                 account_number: account_number.clone(),
                 bank_name: bank_acc_name.clone(),
             };
-            println!("Bank details: {:?}", bank_details);
+            println!("Confirming bank details: {:?}", bank_details);
 
             match data.db.create_user_bank(bank_details) {
                 Ok(bank) => {
