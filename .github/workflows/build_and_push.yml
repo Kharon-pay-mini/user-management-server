@@ -29,12 +29,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
+      - name: Build Docker image (load into Docker engine for testing)
         run: |
           docker buildx build \
             --platform linux/amd64 \
-            -t $GHCR_IMAGE \
+            --load \
             -t local-test-image \
+            -t $GHCR_IMAGE \
             .
 
       - name: Run smoke test before push
