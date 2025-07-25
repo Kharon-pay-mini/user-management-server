@@ -32,7 +32,7 @@ services:
       retries: 3
 
   user-server-2:
-    image: ghcr.io/kharon-labs/kharon-user-management:v0.1.8
+    image: ghcr.io/kharon-labs/kharon-user-management:v0.1.9
     platform: linux/amd64
     env_file: .env
     restart: unless-stopped
