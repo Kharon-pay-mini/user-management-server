@@ -32,9 +32,9 @@ services:
       retries: 3
 
   user-server-2:
-    image: ghcr.io/kharon-labs/kharon-user-management:v0.1.6
+    image: ghcr.io/kharon-labs/kharon-user-management:v0.1.8
     platform: linux/amd64
-    # env_file: .env
+    env_file: .env
     restart: unless-stopped
     ports:
       - "8002:8001"
