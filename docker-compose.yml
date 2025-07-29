@@ -32,7 +32,7 @@ services:
       retries: 3
 
   user-server-2:
-    image: ghcr.io/kharon-labs/kharon-user-management:v0.1.10
+    image: ghcr.io/kharon-labs/kharon-user-management:v0.1.11
     platform: linux/amd64
     env_file: .env
     restart: unless-stopped
@@ -46,13 +46,28 @@ services:
       start_period: 30s 
 
   user-server-3:
-    image: ghcr.io/kharon-labs/kharon-user-management-test:v0.0.1
+    image: ghcr.io/kharon-labs/kharon-user-management-test:v0.0.2
     env_file: .env
     restart: unless-stopped
     ports:
       - "8003:8001"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8003/api/v1/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s 
+
+
+  # ------------------- PAYMENT SERVER -------------------
+  payment-server-3:
+    image: ghcr.io/kharon-labs/kharon-payment-server-test:v0.0.3
+    env_file: payment.env
+    restart: unless-stopped
+    ports:
+      - "8004:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8004/api/v1/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

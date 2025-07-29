@@ -8,19 +8,17 @@ use std::env;
 use std::error::Error;
 
 pub async fn send_verification_email(to_email: &str, otp: i32) -> Result<(), Box<dyn Error>> {
-    let template_path = "src/services/templates/request_otp.hbs";
+    let template = include_str!("templates/request_otp.hbs"); // embed the content
     let from_email = env::var("EMAIL_FROM")?;
     let smtp_username = env::var("SMTP_USERNAME")?;
     let smtp_password = env::var("SMTP_PASSWORD")?;
 
     let mut handlebars = Handlebars::new();
-    handlebars.register_template_file("Verify OTP", template_path)?;
+    handlebars.register_template_string("verify_otp", template)?;
 
-    let data = json!({
-        "otp": otp
-    });
+    let data = json!({ "otp": otp });
 
-    let html_body = handlebars.render("Verify OTP", &data)?;
+    let html_body = handlebars.render("verify_otp", &data)?;
 
     let email = Message::builder()
         .from(format!("Kharon Pay <{}>", from_email).parse::<Mailbox>()?)
@@ -31,7 +29,7 @@ pub async fn send_verification_email(to_email: &str, otp: i32) -> Result<(), Box
 
     let creds = Credentials::new(smtp_username, smtp_password);
 
-    let mailer = SmtpTransport::relay("smtp.gmail.com")?
+    let mailer = SmtpTransport::starttls_relay("smtp.gmail.com")?
         .credentials(creds)
         .build();
 
@@ -44,13 +42,13 @@ pub async fn _send_request_password_reset_email(
     to_email: &str,
     link: &str,
 ) -> Result<(), Box<dyn Error>> {
-    let template_path = "services/templates/request_password_reset.hbs";
+    let template = include_str!("templates/request_password_reset.hbs");
     let from_email = env::var("EMAIL_FROM")?;
     let smtp_username = env::var("SMTP_USERNAME")?;
     let smtp_password = env::var("SMTP_PASSWORD")?;
 
     let mut handlebars = Handlebars::new();
-    handlebars.register_template_file("Reset Password Token", template_path)?;
+    handlebars.register_template_string("Reset Password Token", template)?;
 
     let data = json!({
         "link": link
@@ -67,7 +65,7 @@ pub async fn _send_request_password_reset_email(
 
     let creds = Credentials::new(smtp_username, smtp_password);
 
-    let mailer = SmtpTransport::relay("smtp.gmail.com")?
+    let mailer = SmtpTransport::starttls_relay("smtp.gmail.com")?
         .credentials(creds)
         .build();
 
@@ -77,13 +75,13 @@ pub async fn _send_request_password_reset_email(
 }
 
 pub async fn _send_password_reset_email(to_email: &str) -> Result<(), Box<dyn Error>> {
-    let template_path = "./templates/reset_password.hbs";
+    let template = include_str!("templates/reset_password.hbs");
     let from_email = env::var("EMAIL_FROM")?;
     let smtp_username = env::var("SMTP_USERNAME")?;
     let smtp_password = env::var("SMTP_PASSWORD")?;
 
     let mut handlebars = Handlebars::new();
-    handlebars.register_template_file("Password Reset", template_path)?;
+    handlebars.register_template_string("Password Reset", template)?;
 
     let html_body = handlebars.render("Password Reset", &json!({}))?;
 
@@ -96,7 +94,7 @@ pub async fn _send_password_reset_email(to_email: &str) -> Result<(), Box<dyn Er
 
     let creds = Credentials::new(smtp_username, smtp_password);
 
-    let mailer = SmtpTransport::relay("smtp.gmail.com")?
+    let mailer = SmtpTransport::starttls_relay("smtp.gmail.com")?
         .credentials(creds)
         .build();
 
