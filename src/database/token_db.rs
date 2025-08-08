@@ -21,7 +21,8 @@ pub trait TokenImpl: DbAccess {
     fn get_token_by_user_id(&self, find_user: String) -> Result<Token, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
 
-        user_jwt_tokens.filter(user_id.eq(find_user))
+        user_jwt_tokens
+            .filter(user_id.eq(find_user))
             .first::<Token>(&mut conn)
             .map_err(AppError::DieselError)
     }
@@ -29,7 +30,8 @@ pub trait TokenImpl: DbAccess {
     fn get_token_by_token_string(&self, find_token: String) -> Result<Token, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
 
-        user_jwt_tokens.filter(token.eq(find_token))
+        user_jwt_tokens
+            .filter(token.eq(find_token))
             .first::<Token>(&mut conn)
             .map_err(AppError::DieselError)
     }

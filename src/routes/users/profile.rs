@@ -1,10 +1,15 @@
 use crate::{
-    auth::otp::generate_otp, database::token_db::TokenImpl, helpers::bank_helpers::get_bank_code_and_verify_account, models::{
+    AppState,
+    auth::otp::generate_otp,
+    database::token_db::TokenImpl,
+    helpers::bank_helpers::get_bank_code_and_verify_account,
+    models::{
         models::{
-            BankAccountDetails, NewToken, NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount
+            BankAccountDetails, NewToken, NewUserBankAccount, NewUserBankAccountRequest,
+            UserBankAccount,
         },
         response::FilteredBankDetails,
-    }, AppState
+    },
 };
 use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder,
@@ -478,7 +483,7 @@ async fn validate_otp_handler(
 
             match data.db.create_token(new_token) {
                 Ok(_) => {
-                    println!("Token stored successfully for user: {}", user_id);    
+                    println!("Token stored successfully for user: {}", user_id);
                 }
                 Err(e) => {
                     eprint!("Failed to store token: {:?}", e);

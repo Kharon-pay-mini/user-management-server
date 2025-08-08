@@ -217,7 +217,6 @@ pub struct Token {
     pub created_at: Option<DateTime<Utc>>,
 }
 
-
 // /*  DISPLAY IMPLEMENTATION FOR ENUMS */
 macro_rules! impl_display {
     ($($t:ty), *) => {
