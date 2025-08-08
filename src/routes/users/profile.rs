@@ -1,10 +1,12 @@
 use crate::{
     AppState,
     auth::otp::generate_otp,
+    database::token_db::TokenImpl,
     helpers::bank_helpers::get_bank_code_and_verify_account,
     models::{
         models::{
-            BankAccountDetails, NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount,
+            BankAccountDetails, NewToken, NewUserBankAccount, NewUserBankAccountRequest,
+            UserBankAccount,
         },
         response::FilteredBankDetails,
     },
@@ -473,6 +475,22 @@ async fn validate_otp_handler(
                 .same_site(SameSite::None) //TODO SameSite::Strict in production
                 .finish();
 
+            // Store token in database-- FOR TESTING PURPOSES ONLY
+            let new_token = NewToken {
+                user_id: user_id.clone(),
+                token: token.to_owned().clone(),
+            };
+
+            match data.db.create_token(new_token) {
+                Ok(_) => {
+                    println!("Token stored successfully for user: {}", user_id);
+                }
+                Err(e) => {
+                    eprint!("Failed to store token: {:?}", e);
+                    return HttpResponse::InternalServerError().json("Failed to store token");
+                }
+            }
+
             log_successful_login(&data, &req, user_id).await;
 
             HttpResponse::Ok()
@@ -585,6 +603,51 @@ async fn get_wallet_handler(
     });
 
     HttpResponse::Ok().json(json_response)
+}
+
+#[get("/users/me/tokens")]
+async fn get_tokens_handler(
+    req: HttpRequest,
+    data: web::Data<AppState>,
+    _: JwtMiddleware,
+) -> impl Responder {
+    let ext = req.extensions();
+    let user_id = ext.get::<String>().unwrap();
+
+    match data.db.get_token_by_user_id(user_id.to_string()) {
+        Ok(token) => {
+            let json_response = serde_json::json!({
+                "status": "success",
+                "data": serde_json::json!({
+                    "token": token.token
+                })
+            });
+            HttpResponse::Ok().json(json_response)
+        }
+        Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
+            let json_response = serde_json::json!({
+                "status": "fail",
+                "message": "No token found for this user"
+            });
+            HttpResponse::NotFound().json(json_response)
+        }
+        Err(AppError::DbConnectionError(e)) => {
+            eprintln!("Database connection error: {:?}", e);
+            let json_response = serde_json::json!({
+                "status": "error",
+                "message": "Database connection failed"
+            });
+            HttpResponse::InternalServerError().json(json_response)
+        }
+        Err(AppError::DieselError(e)) => {
+            eprintln!("Database query error: {:?}", e);
+            let json_response = serde_json::json!({
+                "status": "error",
+                "message": "Database query failed"
+            });
+            HttpResponse::InternalServerError().json(json_response)
+        }
+    }
 }
 
 #[post("/users/logout")]
