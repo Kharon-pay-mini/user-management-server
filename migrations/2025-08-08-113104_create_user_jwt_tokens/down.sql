@@ -1,2 +1,2 @@
 -- This file should undo anything in `up.sql`
-DROP TABLE IF EXISTS user_security_logs;
+DROP TABLE IF EXISTS user_jwt_tokens CASCADE;

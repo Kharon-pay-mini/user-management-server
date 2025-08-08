@@ -136,6 +136,13 @@ pub struct NewUserBankAccount {
     pub account_number: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, AsChangeset, Clone, Insertable)]
+#[diesel(table_name=crate::models::schema::user_jwt_tokens)]
+pub struct NewToken {
+    pub user_id: String,
+    pub token: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewUserBankAccountRequest {
     pub bank_name: String,
@@ -199,6 +206,17 @@ pub struct Bank {
     #[serde(rename = "type")]
     pub bank_type: Option<String>,
 }
+
+// FOR TEST PURPOSES ONLY, NOT TO BE USED IN PRODUCTION
+#[derive(Debug, Serialize, Deserialize, Queryable)]
+pub struct Token {
+    pub token_id: uuid::Uuid,
+    pub user_id: String,
+    pub token: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: Option<DateTime<Utc>>,
+}
+
 
 // /*  DISPLAY IMPLEMENTATION FOR ENUMS */
 macro_rules! impl_display {

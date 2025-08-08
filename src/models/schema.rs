@@ -12,6 +12,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    payments (id) {
+        id -> Int4,
+        event_id -> Text,
+        block_number -> Int8,
+        timestamp -> Timestamp,
+        transaction_hash -> Text,
+        sender -> Text,
+        token -> Text,
+        amount -> Text,
+        reference -> Text,
+        status -> Text,
+    }
+}
+
+diesel::table! {
     session_controller_info (id) {
         id -> Uuid,
         #[max_length = 50]
@@ -75,6 +90,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_jwt_tokens (token_id) {
+        token_id -> Uuid,
+        #[max_length = 50]
+        user_id -> Varchar,
+        token -> Text,
+        created_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     user_security_logs (log_id) {
         log_id -> Uuid,
         #[max_length = 50]
@@ -127,14 +152,17 @@ diesel::joinable!(otp -> users (user_id));
 diesel::joinable!(session_controller_info -> users (user_id));
 diesel::joinable!(transactions -> users (user_id));
 diesel::joinable!(user_bank_account -> users (user_id));
+diesel::joinable!(user_jwt_tokens -> users (user_id));
 diesel::joinable!(user_security_logs -> users (user_id));
 diesel::joinable!(user_wallet -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     otp,
+    payments,
     session_controller_info,
     transactions,
     user_bank_account,
+    user_jwt_tokens,
     user_security_logs,
     user_wallet,
     users,
