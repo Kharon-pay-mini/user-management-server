@@ -8,6 +8,7 @@ pub struct Config {
     pub flutterwave_payment_url: String,
     pub flutterwave_callback_url: String,
     pub flutterwave_secret_hash: String,
+    pub hmac_key: String,
 }
 
 impl Config {
@@ -24,6 +25,7 @@ impl Config {
             .expect("FLUTTERWAVE_CALLBACK_URL must be set");
         let flutterwave_secret_hash =
             std::env::var("FLUTTERWAVE_SECRET_HASH").expect("FLUTTERWAVE_SECRET_HASH must be set");
+        let hmac_key = std::env::var("HMAC_KEY").expect("HMAC_KEY must be set");
 
         Config {
             _database_url,
@@ -34,6 +36,7 @@ impl Config {
             flutterwave_payment_url,
             flutterwave_callback_url,
             flutterwave_secret_hash,
+            hmac_key,
         }
     }
 }

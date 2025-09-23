@@ -5,8 +5,7 @@ use serde::Serialize;
 #[derive(Debug, Serialize)]
 pub struct FilteredUser {
     pub id: String,
-    pub email: String,
-    pub phone: Option<String>,
+    pub phone: String,
     pub last_logged_in: DateTime<Utc>,
     pub verified: bool,
     pub role: String,

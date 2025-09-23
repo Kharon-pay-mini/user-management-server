@@ -14,10 +14,12 @@ pub trait UserImpl: DbAccess {
         users.load::<User>(&mut conn).map_err(AppError::DieselError)
     }
 
+    // TODO: EDITED FOR WHATSAPP INTEGRATION, REVERT BACK LATER
     fn get_user_by_email(&self, find_email: String) -> Result<User, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
         users
-            .filter(lower(email).eq(lower(find_email)))
+        
+            // .filter(lower(email).eq(lower(find_email)))
             .first::<User>(&mut conn)
             .map_err(AppError::DieselError)
     }

@@ -63,7 +63,6 @@ fn filtered_security_logs(security_log: &UserSecurityLog) -> FilteredUserSecurit
 fn filtered_user_record(user: &User) -> FilteredUser {
     FilteredUser {
         id: user.id.to_string(),
-        email: user.email.to_string(),
         phone: user.phone.clone(),
         last_logged_in: user.last_logged_in.unwrap_or_else(|| Utc::now()),
         verified: user.verified,
@@ -99,73 +98,62 @@ fn filtered_bank_record(bank: &UserBankAccount) -> FilteredBankDetails {
 
 #[post("/auth/create")]
 async fn create_user_handler(
+    req: HttpRequest,
     body: web::Json<CreateUserSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    let email = body.email.to_string().to_lowercase();
-    let phone: Option<String> = body.phone.as_ref().map(|s| s.to_string());
+    let expected_api_key = &data.env.hmac_key;
 
-    // Early return pattern - check email first
-    match data.db.get_user_by_email(email.clone()) {
+    match req.headers().get("x-api-key") {
+        Some(provided_key) => {
+            if *provided_key != *expected_api_key {
+                return HttpResponse::Unauthorized().json(json!({
+                    "status": "error",
+                    "message": "Invalid API key"
+                }));
+            }
+        }
+        None => {
+            return HttpResponse::Unauthorized().json(json!({
+                "status": "error",
+                "message": "API key missing"
+            }));
+        }
+    }
+
+    let phone: String = body.phone.clone();
+
+    // Check if user with phone already exists
+    match data.db.get_user_by_phone(phone.clone()) {
         Ok(existing_user) => {
-            return generate_otp(existing_user.id, existing_user.email, data.db.clone()).await;
+            return HttpResponse::Ok().json(json!({
+                "status": "success",
+                "message": "User already exists",
+                "data": filtered_user_record(&existing_user)
+            }));
         }
         Err(AppError::DbConnectionError(e)) => {
             eprintln!("DB connection error: {:?}", e);
             return HttpResponse::InternalServerError().json(json!({
                 "status": "error",
-                "message": format!("{:?}", e)
+                "message": "Database connection failed"
             }));
         }
         Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
-            // Continue to phone check
-            eprintln!("Email {} not found for user, checking phone.", email);
+            // User not found, continue to create new user
         }
         Err(AppError::DieselError(e)) => {
             eprintln!("Query error: {:?}", e);
             return HttpResponse::InternalServerError().json(json!({
                 "status": "error",
-                "message": format!("{:?}", e)
+                "message": "Database query failed"
             }));
         }
     }
 
-    // Check phone if provided
-    if let Some(phone_number) = phone.clone() {
-        match data.db.get_user_by_phone(phone_number) {
-            Ok(existing_user) => {
-                return HttpResponse::Ok().json(json!({
-                    "status": "success",
-                    "data": filtered_user_record(&existing_user)
-                }));
-            }
-            Err(AppError::DbConnectionError(e)) => {
-                eprintln!("DB connection error: {:?}", e);
-                return HttpResponse::InternalServerError().json(json!({
-                    "status": "error",
-                    "message": format!("{:?}", e)
-                }));
-            }
-            Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
-                // Continue to user creation
-                eprintln!("Phone not found for user, creating user...");
-            }
-            Err(AppError::DieselError(e)) => {
-                eprintln!("Query error: {:?}", e);
-                return HttpResponse::InternalServerError().json(json!({
-                    "status": "error",
-                    "message": format!("{:?}", e)
-                }));
-            }
-        }
-    }
-
-    // Neither email nor phone found - create new user
+    // Create new user with phone number
     let new_user = NewUser {
-        // Generate a new UUID for user with a simple format to parse felt correctly
-        // This is a workaround to ensure UUIDs are compatible with the Felt format in cartridge controller calls
         id: uuid::Uuid::new_v4().simple().to_string(),
-        email: email.clone(),
         phone: phone.clone(),
         verified: false,
         role: String::from("user"),
@@ -173,14 +161,17 @@ async fn create_user_handler(
 
     match data.db.create_user(new_user.clone()) {
         Ok(user) => {
-            println!("User created successfully: {:?}", user.id);
-            return generate_otp(user.id, user.email, data.db.clone()).await;
+            HttpResponse::Created().json(json!({
+                "status": "success",
+                "message": "User created successfully",
+                "data": filtered_user_record(&user)
+            }))
         }
         Err(e) => {
             eprintln!("Failed to create user: {:?}", e);
             HttpResponse::InternalServerError().json(json!({
                 "status": "error",
-                "message": format!("Failed to create user: {:?}", e)
+                "message": "Failed to create user"
             }))
         }
     }
@@ -381,13 +372,15 @@ async fn update_user_wallet_handler(
     }
 }
 
+
 #[post("/users/resend-otp")]
 async fn resend_otp_handler(
     body: web::Json<OtpSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
     let email = body.email.clone();
-    let user = match data.db.get_user_by_email(email) {
+    // TODO: FIX THE CALL, THIS IS JUST TEMPORARY TO TEST WHATSAPP INTEGRATION
+    let user = match data.db.get_user_by_phone(email) {
         Ok(user) => user,
         Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
             return HttpResponse::NotFound().json(json!({
@@ -404,7 +397,7 @@ async fn resend_otp_handler(
         }
     };
 
-    return generate_otp(user.id, user.email, data.db.clone()).await;
+    return generate_otp(user.id, user.phone, data.db.clone()).await;
 }
 
 #[post("/users/validate-otp")]
@@ -413,23 +406,24 @@ async fn validate_otp_handler(
     data: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
+   
     let user_email = body.email.clone();
     let otp = body.otp;
 
-    let user = match data.db.get_user_by_email(user_email.clone()) {
-        Ok(user) => user,
-        Err(e) => match e {
-            AppError::DieselError(diesel::result::Error::NotFound) => {
-                return HttpResponse::Unauthorized().json("User not found");
-            }
-            _ => {
-                eprintln!("Database error getting user: {:?}", e);
-                return HttpResponse::InternalServerError().json("Database error.");
-            }
-        },
-    };
+    // let user = match data.db.get_user_by_email(user_email.clone()) {
+    //     Ok(user) => user,
+    //     Err(e) => match e {
+    //         AppError::DieselError(diesel::result::Error::NotFound) => {
+    //             return HttpResponse::Unauthorized().json("User not found");
+    //         }
+    //         _ => {
+    //             eprintln!("Database error getting user: {:?}", e);
+    //             return HttpResponse::InternalServerError().json("Database error.");
+    //         }
+    //     },
+    // };
 
-    let user_id = user.id;
+    let user_id = user_email;
     let stored_otp = data.db.get_otp_by_user_id(user_id.clone());
 
     match stored_otp {
@@ -509,7 +503,7 @@ async fn validate_otp_handler(
             };
         }
     }
-}
+} 
 
 #[get("/users/me")]
 async fn get_user_handler(
