@@ -32,7 +32,7 @@ pub trait UserImpl: DbAccess {
             .map_err(AppError::DieselError)
     }
 
-    fn get_user_by_phone(&self, find_phone: String) -> Result<User, AppError> {
+    fn get_user_by_phone(&self, find_phone: &str) -> Result<User, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
         users
             .filter(phone.eq(find_phone))

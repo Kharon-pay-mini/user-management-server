@@ -1,15 +1,10 @@
 use crate::{
-    AppState,
-    auth::otp::generate_otp,
-    database::token_db::TokenImpl,
-    helpers::bank_helpers::get_bank_code_and_verify_account,
-    models::{
+    auth::otp::generate_otp, database::token_db::TokenImpl, helpers::bank_helpers::get_bank_code_and_verify_account, models::{
         models::{
-            BankAccountDetails, NewToken, NewUserBankAccount, NewUserBankAccountRequest,
-            UserBankAccount,
+            BankAccountDetails, GetBankAccountQuery, NewToken, NewUserBankAccount, NewUserBankAccountRequest, UserBankAccount
         },
         response::FilteredBankDetails,
-    },
+    }, AppState
 };
 use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder,
@@ -20,6 +15,7 @@ use awc::cookie::{SameSite, time::OffsetDateTime};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use serde_json::json;
+use sqlx::query;
 use std::usize;
 
 use crate::auth::{
@@ -93,6 +89,7 @@ fn filtered_bank_record(bank: &UserBankAccount) -> FilteredBankDetails {
         user_id: bank.user_id.to_string(),
         bank_name: bank.bank_name.to_string(),
         bank_account_number: bank.account_number.to_string(),
+        account_name: bank.account_name.clone(),
     }
 }
 
@@ -124,7 +121,7 @@ async fn create_user_handler(
     let phone: String = body.phone.clone();
 
     // Check if user with phone already exists
-    match data.db.get_user_by_phone(phone.clone()) {
+    match data.db.get_user_by_phone(phone.clone().as_str()) {
         Ok(existing_user) => {
             return HttpResponse::Ok().json(json!({
                 "status": "success",
@@ -179,15 +176,34 @@ async fn create_user_handler(
 
 #[post("/users/me/bank-accounts/verify")]
 async fn verify_user_bank_account_handler(
-    body: web::Json<NewUserBankAccountRequest>,
+    req: HttpRequest,
+    query: web::Query<NewUserBankAccountRequest>,
     data: web::Data<AppState>,
-    auth: JwtMiddleware,
 ) -> impl Responder {
-    let user_id = auth.user_id;
-    let account_number = body.account_number.clone();
-    let bank_name = body.bank_name.clone();
+    let expected_api_key = &data.env.hmac_key;
 
-    match data.db.get_user_by_id(user_id.as_str()) {
+    match req.headers().get("x-api-key") {
+        Some(provided_key) => {
+            if *provided_key != *expected_api_key {
+                return HttpResponse::Unauthorized().json(json!({
+                    "status": "error",
+                    "message": "Invalid API key"
+                }));
+            }
+        }
+        None => {
+            return HttpResponse::Unauthorized().json(json!({
+                "status": "error",
+                "message": "API key missing"
+            }));
+        }
+    }
+
+    let account_number = query.account_number.clone();
+    let bank_name = query.bank_name.clone();
+    let user_phone = query.phone.clone();
+
+    match data.db.get_user_by_phone(user_phone.as_str()) {
         Ok(_) => {
             let (account_details, bank_code) = match get_bank_code_and_verify_account(
                 &data,
@@ -204,6 +220,7 @@ async fn verify_user_bank_account_handler(
             };
 
             let verification_response = BankAccountDetails {
+                phone: user_phone.clone(),
                 account_name: account_details.account_name,
                 account_number: account_details.account_number,
                 bank_name: bank_name.clone(),
@@ -237,20 +254,41 @@ async fn verify_user_bank_account_handler(
 
 #[post("/users/me/bank-accounts/confirm")]
 async fn confirm_user_bank_account_handler(
+    req: HttpRequest,
     body: web::Json<BankAccountDetails>,
     data: web::Data<AppState>,
-    auth: JwtMiddleware,
 ) -> impl Responder {
-    let user_id = auth.user_id;
+    let expected_api_key = &data.env.hmac_key;
+
+    match req.headers().get("x-api-key") {
+        Some(provided_key) => {
+            if *provided_key != *expected_api_key {
+                return HttpResponse::Unauthorized().json(json!({
+                    "status": "error",
+                    "message": "Invalid API key"
+                }));
+            }
+        }
+        None => {
+            return HttpResponse::Unauthorized().json(json!({
+                "status": "error",
+                "message": "API key missing"
+            }));
+        }
+    }
+
+    let user_phone = body.phone.clone();
     let account_number = body.account_number.clone();
     let bank_acc_name = body.bank_name.clone();
 
-    match data.db.get_user_by_id(user_id.as_str()) {
-        Ok(_) => {
+    match data.db.get_user_by_phone(&user_phone.as_str()) {
+        Ok(user) => {
             let bank_details = NewUserBankAccount {
-                user_id: user_id.clone(),
+                user_id: user.id.clone(),
                 account_number: account_number.clone(),
                 bank_name: bank_acc_name.clone(),
+                account_name: Some(body.account_name.clone()),
+                phone: Some(user_phone.clone()),
             };
             println!("Confirming bank details: {:?}", bank_details);
 
@@ -292,12 +330,29 @@ async fn confirm_user_bank_account_handler(
 async fn get_user_bank_accounts_handler(
     req: HttpRequest,
     data: web::Data<AppState>,
-    _: JwtMiddleware,
+    query: web::Query<GetBankAccountQuery>
 ) -> impl Responder {
-    let ext = req.extensions();
-    let user_id = ext.get::<String>().unwrap();
+    let expected_api_key = &data.env.hmac_key;
+    match req.headers().get("x-api-key") {
+        Some(provided_key) => {
+            if *provided_key != *expected_api_key {
+                return HttpResponse::Unauthorized().json(json!({
+                    "status": "error",
+                    "message": "Invalid API key"
+                }));
+            }
+        }
+        None => {
+            return HttpResponse::Unauthorized().json(json!({
+                "status": "error",
+                "message": "API key missing"
+            }));
+        }
+    }
 
-    match data.db.get_banks_by_user_id(*&user_id) {
+    let user_phone = query.phone.clone();
+
+    match data.db.get_banks_by_user_phone(&user_phone) {
         Ok(banks) => {
             let filtered_banks: Vec<FilteredBankDetails> = banks
                 .into_iter()
@@ -380,7 +435,7 @@ async fn resend_otp_handler(
 ) -> impl Responder {
     let email = body.email.clone();
     // TODO: FIX THE CALL, THIS IS JUST TEMPORARY TO TEST WHATSAPP INTEGRATION
-    let user = match data.db.get_user_by_phone(email) {
+    let user = match data.db.get_user_by_phone(email.as_str()) {
         Ok(user) => user,
         Err(AppError::DieselError(diesel::result::Error::NotFound)) => {
             return HttpResponse::NotFound().json(json!({

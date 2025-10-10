@@ -35,6 +35,7 @@ pub struct FilteredBankDetails {
     pub user_id: String,
     pub bank_name: String,
     pub bank_account_number: String,
+    pub account_name: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

@@ -107,6 +107,7 @@ pub struct AccountVerificationResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BankAccountDetails {
+    pub phone: String,
     pub account_name: String,
     pub account_number: String,
     pub bank_code: String,
@@ -124,7 +125,15 @@ pub struct UserBankAccount {
     pub created_at: Option<DateTime<Utc>>,
     #[serde(rename = "updatedAt")]
     pub updated_at: Option<DateTime<Utc>>,
+    pub phone: Option<String>,
+    pub account_name: Option<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct GetBankAccountQuery {
+    pub phone: String,
+}
+
 
 #[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_bank_account)]
@@ -132,6 +141,8 @@ pub struct NewUserBankAccount {
     pub user_id: String,
     pub bank_name: String,
     pub account_number: String,
+    pub account_name: Option<String>,
+    pub phone: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, AsChangeset, Clone, Insertable)]
@@ -143,6 +154,7 @@ pub struct NewToken {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewUserBankAccountRequest {
+    pub phone: String,
     pub bank_name: String,
     pub account_number: String,
 }
