@@ -31,14 +31,14 @@ pub trait UserBankImpl: DbAccess {
             .map_err(AppError::DieselError)
     }
 
-fn get_banks_by_user_phone(&self, find_phone: &str) -> Result<Vec<UserBankAccount>, AppError> {
-    let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
+    fn get_banks_by_user_phone(&self, find_phone: &str) -> Result<Vec<UserBankAccount>, AppError> {
+        let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
 
-    user_bank_account
-        .filter(phone.eq(find_phone))
-        .get_results::<UserBankAccount>(&mut conn)
-        .map_err(AppError::DieselError)
-}
+        user_bank_account
+            .filter(phone.eq(find_phone))
+            .get_results::<UserBankAccount>(&mut conn)
+            .map_err(AppError::DieselError)
+    }
 
     fn get_banks_by_user_id(&self, find_user: &str) -> Result<Vec<UserBankAccount>, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;

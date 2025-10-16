@@ -4,16 +4,13 @@ use crate::{
     helpers::bank_helpers::get_bank_code_and_verify_account,
     models::{
         models::{
-            BankAccountDetails, GetBankAccountQuery, NewUserBankAccount,
-            NewUserBankAccountRequest, UserBankAccount,
+            BankAccountDetails, GetBankAccountQuery, NewUserBankAccount, NewUserBankAccountRequest,
+            UserBankAccount,
         },
         response::FilteredBankDetails,
     },
 };
-use actix_web::{
-    HttpMessage, HttpRequest, HttpResponse, Responder,
-    get, post, web,
-};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, get, post, web};
 use chrono::{Duration, Utc};
 use serde_json::json;
 use sqlx::query;
@@ -323,10 +320,4 @@ async fn get_user_bank_accounts_handler(
             HttpResponse::InternalServerError().json("Error fetching user bank accounts")
         }
     }
-}
-
-#[get("/healthz")]
-pub async fn health_check() -> impl Responder {
-    // Returns a 200 OK status with plain text
-    HttpResponse::Ok().body("Service is healthy!") 
 }

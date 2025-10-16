@@ -18,7 +18,6 @@ pub trait UserImpl: DbAccess {
     fn get_user_by_email(&self, find_email: String) -> Result<User, AppError> {
         let mut conn = self.conn().map_err(AppError::DbConnectionError)?;
         users
-        
             // .filter(lower(email).eq(lower(find_email)))
             .first::<User>(&mut conn)
             .map_err(AppError::DieselError)

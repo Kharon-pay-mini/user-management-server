@@ -134,7 +134,6 @@ pub struct GetBankAccountQuery {
     pub phone: String,
 }
 
-
 #[derive(Debug, Deserialize, Serialize, Clone, AsChangeset, Insertable)]
 #[diesel(table_name=crate::models::schema::user_bank_account)]
 pub struct NewUserBankAccount {
