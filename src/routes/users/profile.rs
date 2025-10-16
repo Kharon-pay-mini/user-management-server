@@ -325,7 +325,7 @@ async fn get_user_bank_accounts_handler(
     }
 }
 
-#[get("/health")]
+#[get("/healthz")]
 pub async fn health_check() -> impl Responder {
     // Returns a 200 OK status with plain text
     HttpResponse::Ok().body("Service is healthy!") 
