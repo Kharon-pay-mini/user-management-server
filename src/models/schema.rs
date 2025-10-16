@@ -86,9 +86,9 @@ diesel::table! {
         account_number -> Varchar,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
-        #[max_length = 50]
+        #[max_length = 30]
         phone -> Nullable<Varchar>,
-        #[max_length = 50]
+        #[max_length = 255]
         account_name -> Nullable<Varchar>,
     }
 }
